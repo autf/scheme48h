@@ -5,4 +5,6 @@ import System.Environment
 main :: IO ()
 main = do
   args <- getArgs
-  putStrLn ("hello, " ++ args !! 0)
+  let nums :: [Int]
+      nums = map read args
+  putStrLn . show $ foldl (+) 0 nums
