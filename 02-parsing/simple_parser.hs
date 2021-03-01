@@ -7,17 +7,13 @@ symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
 spaces :: Parser ()
 spaces = skipMany1 space
 
--- readExp :: String -> String
--- readExp input = case parse (spaces >> symbol) "lisp" input of
---   Left err -> "<failed>: " ++ show err
---   Right val -> "accepted"
-
 data LispVal = Atom String
              | List [LispVal]
              | DottedList [LispVal] LispVal
              | String String
              | Number Integer
              | Bool Bool
+             deriving Show
 
 parseString :: Parser LispVal
 parseString = do
@@ -39,12 +35,34 @@ parseNumber :: Parser LispVal
 parseNumber = Number . read <$> many1 digit
 
 parseExpr :: Parser LispVal
-parseExpr = parseString <|> parseAtom <|> parseNumber
+parseExpr = parseString
+            <|> parseAtom
+            <|> parseNumber
+            <|> parseQuoted
+            <|> do char '('
+                   l <- try parseList <|> parseDottedList
+                   char ')'
+                   return l
+
+parseList :: Parser LispVal
+parseList = List <$> sepBy parseExpr spaces
+
+parseDottedList :: Parser LispVal
+parseDottedList = do
+  head <- endBy parseExpr spaces
+  tail <- char '.' >> spaces >> parseExpr
+  return $ DottedList head tail
+
+parseQuoted :: Parser LispVal
+parseQuoted = do
+  char '\''
+  e <- parseExpr
+  return $ List [Atom "quote", e]
 
 readExpr :: String -> String
 readExpr input = case parse parseExpr "lisp" input of
   Left err -> "<failed>: " ++ show err
-  Right _ -> "accepted!"
+  Right expr -> show expr
 
 main :: IO ()
 main = do
