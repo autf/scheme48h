@@ -83,6 +83,32 @@ eval v@(Number _) = v
 --eval v@(Atom _) = v
 eval v@(Bool _) = v
 eval (List [Atom "quote", xs]) = xs
+eval (List (Atom fn : xs)) = apply fn $ map eval xs
+
+apply :: String -> [LispVal] -> LispVal
+apply fn xs = maybe (Bool False) ($ xs) $
+  lookup fn primitives
+
+primitives :: [(String, [LispVal] -> LispVal)]
+primitives = [("+", numericBinop (+)),
+              ("-", numericBinop (-)),
+              ("*", numericBinop (*)),
+              ("/", numericBinop div),
+              ("mod", numericBinop mod),
+              ("quotient", numericBinop quot),
+              ("remainder", numericBinop rem)]
+
+numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> LispVal
+numericBinop op vs = Number $ foldl1 op $ map unpackNum vs
+
+unpackNum :: LispVal -> Integer
+unpackNum (Number n) = n
+unpackNum (String s) = let parsed = reads s :: [(Integer, String)] in
+  if null parsed
+  then 0
+  else fst $ parsed !! 0
+--unpackNum (List [n]) = unpackNum n
+unpackNum _ = 0
 
 main :: IO ()
 main = print . eval . readExpr . head =<< getArgs
