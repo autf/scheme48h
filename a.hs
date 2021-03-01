@@ -13,7 +13,6 @@ data LispVal = Atom String
              | String String
              | Number Integer
              | Bool Bool
-             deriving Show
 
 parseString :: Parser LispVal
 parseString = do
@@ -63,6 +62,20 @@ readExpr :: String -> String
 readExpr input = case parse parseExpr "lisp" input of
   Left err -> "<failed>: " ++ show err
   Right expr -> show expr
+
+showVal :: LispVal -> String
+showVal (String cs) = "\"" ++ cs ++ "\""
+showVal (Atom name) = name
+showVal (Number n) = show n
+showVal (Bool True) = "#t"
+showVal (Bool False) = "#f"
+showVal (List xs) = "(" ++ unwordList xs ++ ")"
+showVal (DottedList xs x) = "(" ++ unwordList xs ++ "." ++ showVal x ++ ")"
+
+unwordList :: [LispVal] -> String
+unwordList = unwords . map showVal
+
+instance Show LispVal where show = showVal
 
 main :: IO ()
 main = do
