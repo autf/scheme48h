@@ -4,8 +4,14 @@ import System.Environment
 symbol :: Parser Char
 symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
 
+spaces :: Parser ()
+spaces = skipMany1 space
+
+-- spaces :: Parser String
+-- spaces = many1 space
+
 readExp :: String -> String
-readExp input = case parse symbol "lisp" input of
+readExp input = case parse (spaces >> symbol) "lisp" input of
   Left err -> "<failed>: " ++ show err
   Right val -> "accepted"
 
