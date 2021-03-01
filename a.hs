@@ -58,10 +58,10 @@ parseQuoted = do
   e <- parseExpr
   return $ List [Atom "quote", e]
 
-readExpr :: String -> String
+readExpr :: String -> LispVal
 readExpr input = case parse parseExpr "lisp" input of
-  Left err -> "<failed>: " ++ show err
-  Right expr -> show expr
+  Left err -> String $ "<failed>: " ++ show err
+  Right val -> val
 
 showVal :: LispVal -> String
 showVal (String cs) = "\"" ++ cs ++ "\""
@@ -77,7 +77,12 @@ unwordList = unwords . map showVal
 
 instance Show LispVal where show = showVal
 
+eval :: LispVal -> LispVal
+eval v@(String _) = v
+eval v@(Number _) = v
+--eval v@(Atom _) = v
+eval v@(Bool _) = v
+eval (List [Atom "quote", xs]) = xs
+
 main :: IO ()
-main = do
-  (arg:_) <- getArgs
-  putStrLn . readExpr $ arg
+main = print . eval . readExpr . head =<< getArgs
