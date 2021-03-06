@@ -144,5 +144,10 @@ extractValue (Right v) = v
 main :: IO ()
 main = do
   args <- getArgs
-  putStrLn $ extractValue . trapError $ return . show <$> eval =<< (readExpr $ head args)
---main = print =<< eval =<< readExpr . head =<< getArgs
+  putStrLn . extractValue . trapError . fmap show $ eval =<< (readExpr $ head args)
+
+--   let val = (readExpr . head $ args) >>= eval >>= return . show
+--   putStrLn $ extractValue $ trapError $ val
+
+--   --(readExpr . head $ args) >>= show <*> eval >>= putStrLn . extractValue . trapError
+-- --main = print =<< eval =<< readExpr . head =<< getArgs
