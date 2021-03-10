@@ -99,7 +99,28 @@ primitives = [("+", numericBinop (+)),
               ("/", numericBinop div),
               ("mod", numericBinop mod),
               ("quotient", numericBinop quot),
-              ("remainder", numericBinop rem)]
+              ("remainder", numericBinop rem),
+              ("=", numsNumBinop (==)),
+              ("<", numsNumBinop (<)),
+              (">", numsNumBinop (>)),
+              ("/=", numsNumBinop (/=)),
+              ("<=", numsNumBinop (<=)),
+              (">=", numsNumBinop (>=)),
+              ("&&", boolsBoolBinop (&&)),
+              ("||", boolsBoolBinop (||)),
+              ("string=?", strsBoolBinop (==)),
+              ("string<?", strsBoolBinop (<)),
+              ("string>?", strsBoolBinop (>)),
+              ("string<=?", strsBoolBinop (<=)),
+              ("string>=?", strsBoolBinop (>=))]
+
+boolBinop :: (LispVal -> ThrowsError a) -> (a -> a -> Bool) -> [LispVal] -> ThrowsError LispVal
+boolBinop unpack op (x:y:[]) = fmap Bool $ op <$> unpack x <*> unpack y
+boolBinop _ _ args = throwError $ NumArgs 2 args
+
+numsNumBinop   = boolBinop unpackNum
+boolsBoolBinop = boolBinop unpackBool
+strsBoolBinop  = boolBinop unpackStr
 
 numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> ThrowsError LispVal
 numericBinop _ [] = throwError $ NumArgs 2 []
@@ -114,6 +135,16 @@ unpackNum (String s) = let parsed = reads s :: [(Integer, String)] in
   else return . fst $ parsed !! 0
 --unpackNum (List [n]) = unpackNum n
 unpackNum nan = throwError $ TypeMismatch "number" nan
+
+unpackBool :: LispVal -> ThrowsError Bool
+unpackBool (Bool b) = return b
+unpackBool notABool = throwError $ TypeMismatch "bool" notABool
+
+unpackStr :: LispVal -> ThrowsError String
+unpackStr (String s) = return s
+unpackStr (Number n) = return $ show n
+unpackStr (Bool   b) = return $ show b
+unpackStr other = throwError $ TypeMismatch "string" other
 
 data LispError = NumArgs Integer [LispVal]
                | TypeMismatch String LispVal
