@@ -98,6 +98,29 @@ cons [x, y] = return $ DottedList [x] y
 cons [x] = throwError $ TypeMismatch "pair" x
 cons badArgList = throwError $ NumArgs 2 badArgList
 
+eqv :: [LispVal] -> ThrowsError LispVal
+eqv [Bool x, Bool y] = return $ Bool $ x == y
+eqv [Number x, Number y] = return $ Bool $ x == y
+eqv [Atom x, Atom y] = return $ Bool $ x == y
+eqv [String x, String y] = return $ Bool $ x == y
+eqv [List xs, List ys] = case (xs, ys) of
+    ([_], []) -> return $ Bool False
+    ([], [_]) -> return $ Bool False
+    ([],  []) -> return $ Bool True
+    (x:xs', y:ys') -> case eqv [x, y] of
+        Right (Bool False) -> return $ Bool False
+        otherwise -> eqv [List xs', List ys']
+
+eqv [DottedList xs y, DottedList xs' y'] = eqv [List (y:xs), List (y':xs')]
+    --do
+    --leftEq <- eqv [List xs, List xs']
+    --rightEq <- eqv [y, y']
+    --case (leftEq, rightEq) of
+    --    (Bool True, Bool True) -> return $ Bool True
+    --    otherwise -> return $ Bool False
+eqv [_, _] = return $ Bool False
+eqv badArgList = throwError $ NumArgs 2 badArgList
+
 eval :: LispVal -> ThrowsError LispVal
 eval v@(String _) = return v
 eval v@(Number _) = return v
@@ -140,7 +163,9 @@ primitives = [("+", numericBinop (+)),
               ("string>=?", strsBoolBinop (>=)),
               ("car", car),
               ("cdr", cdr),
-              ("cons", cons)]
+              ("cons", cons),
+              ("eq?", eqv),
+              ("eqv?", eqv)]
 
 boolBinop :: (LispVal -> ThrowsError a) -> (a -> a -> Bool) -> [LispVal] -> ThrowsError LispVal
 boolBinop unpack op (x:y:[]) = fmap Bool $ op <$> unpack x <*> unpack y
@@ -190,6 +215,7 @@ showError (NumArgs expected found) = "Expected " ++ show expected ++ " args; fou
                                      unwordList found
 showError (TypeMismatch expected found) = "Invalid type: expected " ++ expected ++ ", found " ++ show found
 showError (Parser err) = "Parser error at " ++ show err
+showError (Default msg) = msg
 
 instance Show LispError where show = showError
 
