@@ -91,6 +91,13 @@ cdr [DottedList (_:xs) y] = return $ DottedList xs y
 cdr [x] = throwError $ TypeMismatch "pair" x
 cdr badArgList = throwError $ NumArgs 1 badArgList
 
+cons :: [LispVal] -> ThrowsError LispVal
+cons [x, (List xs)] = return $ List $ x:xs
+cons [x, (DottedList xs y)] = return $ DottedList (x:xs) y
+cons [x, y] = return $ DottedList [x] y
+cons [x] = throwError $ TypeMismatch "pair" x
+cons badArgList = throwError $ NumArgs 2 badArgList
+
 eval :: LispVal -> ThrowsError LispVal
 eval v@(String _) = return v
 eval v@(Number _) = return v
@@ -132,7 +139,8 @@ primitives = [("+", numericBinop (+)),
               ("string<=?", strsBoolBinop (<=)),
               ("string>=?", strsBoolBinop (>=)),
               ("car", car),
-              ("cdr", cdr)]
+              ("cdr", cdr),
+              ("cons", cons)]
 
 boolBinop :: (LispVal -> ThrowsError a) -> (a -> a -> Bool) -> [LispVal] -> ThrowsError LispVal
 boolBinop unpack op (x:y:[]) = fmap Bool $ op <$> unpack x <*> unpack y
