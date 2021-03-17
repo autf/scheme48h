@@ -1,2 +1,2 @@
 language = "haskell"
-run = ""
+run = "ghc a.hs"

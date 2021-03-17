@@ -71,12 +71,25 @@ showVal (Number n) = show n
 showVal (Bool True) = "#t"
 showVal (Bool False) = "#f"
 showVal (List xs) = "(" ++ unwordList xs ++ ")"
-showVal (DottedList xs x) = "(" ++ unwordList xs ++ "." ++ showVal x ++ ")"
+showVal (DottedList xs x) = "(" ++ unwordList xs ++ " . " ++ showVal x ++ ")"
 
 unwordList :: [LispVal] -> String
 unwordList = unwords . map showVal
 
 instance Show LispVal where show = showVal
+
+car :: [LispVal] -> ThrowsError LispVal
+car [List (x:_)] = return x
+car [DottedList (x:_) _] = return x
+car [x] = throwError $ TypeMismatch "pair" x
+car badArgList = throwError $ NumArgs 1 badArgList
+
+cdr :: [LispVal] -> ThrowsError LispVal
+cdr [List (_:xs)] = return $ List xs
+cdr [DottedList [_] y] = return y
+cdr [DottedList (_:xs) y] = return $ DottedList xs y
+cdr [x] = throwError $ TypeMismatch "pair" x
+cdr badArgList = throwError $ NumArgs 1 badArgList
 
 eval :: LispVal -> ThrowsError LispVal
 eval v@(String _) = return v
@@ -84,6 +97,11 @@ eval v@(Number _) = return v
 --eval v@(Atom _) = v
 eval v@(Bool _) = return v
 eval (List [Atom "quote", xs]) = return xs
+eval (List [Atom "if", pred, conseq, alt]) = do
+    b <- eval pred
+    case b of
+        Bool True -> eval conseq
+        _ -> eval alt
 eval (List (Atom fn : xs)) = apply fn =<< mapM eval xs
 eval badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
 
@@ -112,7 +130,9 @@ primitives = [("+", numericBinop (+)),
               ("string<?", strsBoolBinop (<)),
               ("string>?", strsBoolBinop (>)),
               ("string<=?", strsBoolBinop (<=)),
-              ("string>=?", strsBoolBinop (>=))]
+              ("string>=?", strsBoolBinop (>=)),
+              ("car", car),
+              ("cdr", cdr)]
 
 boolBinop :: (LispVal -> ThrowsError a) -> (a -> a -> Bool) -> [LispVal] -> ThrowsError LispVal
 boolBinop unpack op (x:y:[]) = fmap Bool $ op <$> unpack x <*> unpack y
